@@ -43,7 +43,7 @@ export default function AuthPage() {
               <div className="form-group">
                 <label className="form-label">Full Name</label>
                 <input
-                  className="form-input" type="text" placeholder="John Doe" required
+                  className="form-input" type="text" placeholder="Your Name" required
                   value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                 />
               </div>
@@ -51,14 +51,14 @@ export default function AuthPage() {
             <div className="form-group">
               <label className="form-label">Email</label>
               <input
-                className="form-input" type="email" placeholder="you@example.com" required
+                className="form-input" type="email" placeholder="name@gmail.com" required
                 value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
               />
             </div>
             <div className="form-group">
               <label className="form-label">Password</label>
               <input
-                className="form-input" type="password" placeholder="Min. 6 characters" required
+                className="form-input" type="password" placeholder="Set Password" required
                 value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
               />
             </div>

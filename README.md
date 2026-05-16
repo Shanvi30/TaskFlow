@@ -61,6 +61,7 @@ taskflow/
 ## REST API Reference
 
 ### Auth
+
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
 | POST | `/api/auth/signup` | No | Register new user |
@@ -68,6 +69,7 @@ taskflow/
 | GET | `/api/auth/me` | Yes | Get current user |
 
 ### Projects
+
 | Method | Endpoint | Role | Description |
 |--------|----------|------|-------------|
 | GET | `/api/projects` | Any | List user's projects |
@@ -79,6 +81,7 @@ taskflow/
 | DELETE | `/api/projects/:id/members/:uid` | Admin | Remove member |
 
 ### Tasks
+
 | Method | Endpoint | Role | Description |
 |--------|----------|------|-------------|
 | GET | `/api/projects/:id/tasks` | Member+ | List tasks (filterable) |
@@ -88,6 +91,7 @@ taskflow/
 | DELETE | `/api/projects/:id/tasks/:tid` | Creator/Admin | Delete task |
 
 ### Dashboard
+
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
 | GET | `/api/dashboard` | Yes | Stats, my tasks, overdue |
@@ -110,6 +114,7 @@ taskflow/
 ## Local Development
 
 ### Prerequisites
+
 - Node.js 18+
 - npm
 
@@ -134,6 +139,7 @@ cp .env.example backend/.env
 ### Run locally
 
 **Terminal 1 — Backend:**
+
 ```bash
 cd backend
 node server.js
@@ -141,6 +147,7 @@ node server.js
 ```
 
 **Terminal 2 — Frontend:**
+
 ```bash
 cd frontend
 npm run dev

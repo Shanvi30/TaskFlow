@@ -1,82 +1,65 @@
 const jwt = require('jsonwebtoken');
-const { getDb } = require('../db/database');
+const { pool } = require('../db/database');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_change_in_production';
+const JWT_SECRET = process.env.JWT_SECRET;
 
-function authenticate(req, res, next) {
+async function authenticate(req, res, next) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Authentication required' });
   }
-
   const token = authHeader.slice(7);
   try {
     const payload = jwt.verify(token, JWT_SECRET);
-    const db = getDb();
-    const user = db.prepare('SELECT id, name, email FROM users WHERE id = ?').get(payload.userId);
-    if (!user) return res.status(401).json({ error: 'User not found' });
-    req.user = user;
+    const result = await pool.query('SELECT id, name, email FROM users WHERE id = $1', [payload.userId]);
+    if (!result.rows[0]) return res.status(401).json({ error: 'User not found' });
+    req.user = result.rows[0];
     next();
   } catch {
     return res.status(401).json({ error: 'Invalid or expired token' });
   }
 }
 
-// Middleware: ensure user is admin of a project (project_id from params or body)
-function requireProjectAdmin(req, res, next) {
-  const db = getDb();
+async function requireProjectAdmin(req, res, next) {
   const projectId = req.params.projectId || req.body.project_id;
   if (!projectId) return res.status(400).json({ error: 'Project ID required' });
+  try {
+    const proj = await pool.query('SELECT * FROM projects WHERE id = $1', [projectId]);
+    if (!proj.rows[0]) return res.status(404).json({ error: 'Project not found' });
+    const project = proj.rows[0];
 
-  const project = db.prepare('SELECT * FROM projects WHERE id = ?').get(projectId);
-  if (!project) return res.status(404).json({ error: 'Project not found' });
-
-  // Owner is always admin
-  if (project.owner_id === req.user.id) {
-    req.project = project;
-    req.projectRole = 'admin';
-    return next();
-  }
-
-  const membership = db.prepare(
-    'SELECT role FROM project_members WHERE project_id = ? AND user_id = ?'
-  ).get(projectId, req.user.id);
-
-  if (!membership || membership.role !== 'admin') {
-    return res.status(403).json({ error: 'Admin access required for this project' });
-  }
-
-  req.project = project;
-  req.projectRole = 'admin';
-  next();
+    if (project.owner_id === req.user.id) {
+      req.project = project; req.projectRole = 'admin'; return next();
+    }
+    const mem = await pool.query(
+      'SELECT role FROM project_members WHERE project_id = $1 AND user_id = $2',
+      [projectId, req.user.id]
+    );
+    if (!mem.rows[0] || mem.rows[0].role !== 'admin') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+    req.project = project; req.projectRole = 'admin'; next();
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 }
 
-// Middleware: ensure user is a member (any role) of a project
-function requireProjectMember(req, res, next) {
-  const db = getDb();
+async function requireProjectMember(req, res, next) {
   const projectId = req.params.projectId || req.body.project_id;
   if (!projectId) return res.status(400).json({ error: 'Project ID required' });
+  try {
+    const proj = await pool.query('SELECT * FROM projects WHERE id = $1', [projectId]);
+    if (!proj.rows[0]) return res.status(404).json({ error: 'Project not found' });
+    const project = proj.rows[0];
 
-  const project = db.prepare('SELECT * FROM projects WHERE id = ?').get(projectId);
-  if (!project) return res.status(404).json({ error: 'Project not found' });
-
-  if (project.owner_id === req.user.id) {
-    req.project = project;
-    req.projectRole = 'admin';
-    return next();
-  }
-
-  const membership = db.prepare(
-    'SELECT role FROM project_members WHERE project_id = ? AND user_id = ?'
-  ).get(projectId, req.user.id);
-
-  if (!membership) {
-    return res.status(403).json({ error: 'You are not a member of this project' });
-  }
-
-  req.project = project;
-  req.projectRole = membership.role;
-  next();
+    if (project.owner_id === req.user.id) {
+      req.project = project; req.projectRole = 'admin'; return next();
+    }
+    const mem = await pool.query(
+      'SELECT role FROM project_members WHERE project_id = $1 AND user_id = $2',
+      [projectId, req.user.id]
+    );
+    if (!mem.rows[0]) return res.status(403).json({ error: 'Not a project member' });
+    req.project = project; req.projectRole = mem.rows[0].role; next();
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 }
 
 module.exports = { authenticate, requireProjectAdmin, requireProjectMember, JWT_SECRET };
